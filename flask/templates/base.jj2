@@ -1,0 +1,8 @@
+{# Jinja2 Template File #}
+{% include 'header.jj2' %}
+
+<body>
+{% include 'login-dropdown.jj2' %}
+Not much to see here.
+
+{% include 'footer.jj2' %}

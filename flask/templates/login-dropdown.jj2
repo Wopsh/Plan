@@ -1,0 +1,11 @@
+{# Jinja2 Template File #}
+<div class="dropdown">
+log in / register
+<form class="menu" action="/login" method="POST">
+Existing users sign in:<br>
+username: <input type="text" name="username"><br/>
+password: <input type="password" name="password">
+<input type="submit" value="Submit"><br>
+<a href="/"> Register new user</a>
+</form>
+</div>
