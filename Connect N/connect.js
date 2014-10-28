@@ -23,6 +23,9 @@ var lasthoveredCell=null
 for (x=0; x<gridSize.x; x=x+1){
 		for (y=0; y<gridSize.y; y=y+1){
 			spaces[x+gridSize.x*y]={
+				index:[x+gridSize.x*y],
+				x:x,
+				y:y,
 				origin:{x:x*cellWidth,y:y*cellHeight},
 				hovered:false,
 				owner:null
@@ -100,7 +103,16 @@ function connectSetup()
 		event.canvasX=event.x-canvas.getBoundingClientRect().left;
 		event.canvasY=event.y-canvas.getBoundingClientRect().top;
 		var cell=getCell(event);
-		cell.owner=game.playerNum;
+		//cell.owner=game.playerNum;
+		socket.send('action'+
+			'{'+ 
+			'"action":"move",' +
+			'"move":' +
+			'{ "x":' + cell.x +
+			', "y":' + cell.y +
+			', "index":' + cell.index +
+			'}' +
+		'}')
 	};
 	input_callbacks.mousemove=function (event) {
 		event.canvasX=event.x-canvas.getBoundingClientRect().left;
@@ -135,8 +147,16 @@ function drawBoard()
 		var cell=spaces[i]
 		if (cell.hovered)
 		{
+			if(game.turn==true && cell.owner==null)
+			{
 			context.fillStyle='#BFC'
 			context.fillRect(cell.origin.x, cell.origin.y, cellWidth, cellHeight)
+			}
+			else
+			{
+			context.fillStyle='#888'
+			context.fillRect(cell.origin.x, cell.origin.y, cellWidth, cellHeight)
+			}
 		}
 		if (game.playerNum!=null && cell.owner==game.playerNum)
 		{
