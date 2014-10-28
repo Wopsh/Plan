@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-#from twisted.python import log
 import json
 from twisted.internet import reactor
-from autobahn.twisted.websocket import WebSocketServerProtocol, \
-                                       WebSocketServerFactory
+from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 
 
 class Game():
