@@ -79,7 +79,6 @@ class Game():
 			 '}}')
 
 
-
 class Player():
 	def __init__(self, playerNum, serverProtocol):
 		self.playerNum = playerNum
@@ -94,8 +93,6 @@ class Player():
 			self.opponentColor='"#FF8"'
 			self.serverProtocol=serverProtocol
 		
-
-
 
 
 class GameServerProtocol(WebSocketServerProtocol):
@@ -126,8 +123,6 @@ class GameServerProtocol(WebSocketServerProtocol):
 			print 'connction closed uncleanly code: {code} reason: {reason}'.format(code=code, reason=reason)
 
 
-
-#log.startLogging(sys.stdout)
 print 'starting ' + 'Connect N' + ' server' 
 factory = WebSocketServerFactory("ws://localhost:55555", debug = True)
 factory.protocol = GameServerProtocol
