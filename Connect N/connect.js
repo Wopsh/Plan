@@ -49,7 +49,9 @@ var serverURL='ws://127.0.0.1:55555'
 var socket = new WebSocket(serverURL);
 
 socket.onopen = function (event) {
+	console.log('socket open')
 	socket.send('request game');
+	updateStatusText('socket opened, awaiting server reply');
 }
 socket.onmessage = function (event) {
 	console.log('message came from server');
@@ -60,6 +62,8 @@ socket.onmessage = function (event) {
 	}
 }
 socket.onclose = function (event) {
+console.log('socket closed')
+updateStatusText('socket closed, no server connection');
 }
 
 function update(update){
@@ -89,6 +93,11 @@ instead of game['spaces.2.owner'] which doesn't exist.
 	}
 	status_info.innerText=game.status;
 	drawBoard();
+}
+
+function updateStatusText(text){
+	game.status=text;
+	status_info.innerText=game.status;
 }
 
 
