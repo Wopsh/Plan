@@ -34,8 +34,12 @@ for (x=0; x<gridSize.x; x=x+1){
 	}
 var status_info=null
 
+var socket=null;
+
 //status and websocket
-game={
+
+//var player={}
+var game={
 	status:'waiting for connection',
 	playerNum:null,
 	playerColor:null,
@@ -45,25 +49,52 @@ game={
 	}
 
 
-var serverURL='ws://127.0.0.1:55555'
-var socket = new WebSocket(serverURL);
 
-socket.onopen = function (event) {
-	console.log('socket open')
-	socket.send('request game');
-	updateStatusText('socket opened, awaiting server reply');
-}
-socket.onmessage = function (event) {
-	console.log('message came from server');
-	message=JSON.parse(event.data);
-	console.log(message)
-	if(message.update != null){
-		update(message.update);
+
+function connectPress()
+{	
+    var customIP = document.getElementById("custom_ip").value;
+	var customPort = document.getElementById("custom_port").value;
+	var serverURL='ws://' + customIP + ':' + customPort;
+	socket = new WebSocket(serverURL);
+
+	socket.onopen = function (event) {
+		console.log('socket open')
+		socket.send('request game');
+		updateStatusText('socket opened, awaiting server reply');
+		var manual_connect = document.getElementById('manual_connect');
+		manual_connect.hidden=true;
 	}
-}
-socket.onclose = function (event) {
-console.log('socket closed')
-updateStatusText('socket closed, no server connection');
+	socket.onmessage = function (event) {
+		console.log('message came from server');
+		message=JSON.parse(event.data);
+		console.log(message)
+		if(message.update != null){
+			update(message.update);
+		}
+	}
+	//socket.onerror=function (event)  {}// not used because event contains no information
+	socket.onclose = function (event) {
+	console.log('socket closed')
+	if (event.wasClean==true) {
+	updateStatusText('socket closed, no server connection');
+	}
+	else {
+		if(event.reason!=''){
+		updateStatusText('Connection error. No server connection. Error: '+ event.reason);
+		}
+		else{
+			if(event.code!=null){
+			updateStatusText('Connection error. No server connection. WebSocket CloseEvent code: '+ event.code);
+			}
+			else{
+			updateStatusText('Connection error. No server connection. No error information could be obtained. ');
+			}
+		}
+	}
+	var manual_connect = document.getElementById('manual_connect');
+	manual_connect.hidden=false;
+	}
 }
 
 function update(update){
