@@ -6,6 +6,6 @@ Existing users sign in:<br>
 username: <input type="text" name="username"><br/>
 password: <input type="password" name="password">
 <input type="submit" value="Submit"><br>
-<a href="/"> Register new user</a>
+<a href="/register"> Register new user</a>
 </form>
 </div>

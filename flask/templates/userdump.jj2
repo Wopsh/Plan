@@ -2,6 +2,5 @@
 {% include 'header.jj2' %}
 
 <body>
-{% include 'login-dropdown.jj2' %}
-{% include 'server-dummy.jj2' %}
+{{dumptable}}
 {% include 'footer.jj2' %}
