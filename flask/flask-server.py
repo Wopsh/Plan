@@ -78,7 +78,7 @@ else: # about to restart
 sql=sqlalchemy
 eng=sql.create_engine('sqlite:///' + working_directory + '/sqlite/sq_userdata.db')
 #eng=sql.create_engine('sqlite:///./sqlite/sq_userdata.db')
-eng.echo=True
+#eng.echo=True
 #eng.raw_connection().connection.text_factory = str
 session=sessionmaker(bind=eng)()
 
@@ -98,7 +98,7 @@ class User(Base):
 Base.metadata.create_all(eng)
 
 for i in session.query(User).order_by(User.id): 
-		print i.username, i.password
+		print i.username, i.password, i.authToken
 
 
 
@@ -109,17 +109,14 @@ app = Flask(__name__)
 
 @app.route("/login", methods=['GET', 'POST'])
 def loginOut():
-	routeSession=sessionmaker(bind=eng)()
-	#expr = sqlalchemy.update('users').values(name='ZZZZZ')
-	expr= '''
-	UPDATE users
-	SET username="ZZZZZ"
-	WHERE id=0;
-	'''
-	routeSession.execute(expr)
+	#routeSession=sessionmaker(bind=eng)()
+	#expr = sqlalchemy.update(User).values(username='Zeus')
+	#expr2= '''UPDATE users SET authToken="nerp" WHERE username="Zeus"; '''
+	#routeSession.execute(expr)
+	#routeSession.commit()
 	formUsername = request.form.get('username')
 	formPassword = request.form.get('password')
-	resp = make_response(redirect('/show_authentication'))
+	resp = make_response('yep')#redirect('/show_authentication')
 	#resp.set_cookie('username', formUsername)
 	#resp.set_cookie('password', formPassword)
 	return resp
