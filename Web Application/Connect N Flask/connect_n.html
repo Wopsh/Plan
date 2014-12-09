@@ -1,0 +1,26 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title> Connect N</title>
+<!-- <link rel="shortcut icon" href=" replace this " /> -->
+<!-- <link rel="stylesheet" type="text/css" replace this " /> -->
+<script src="canvas_input.js"></script>
+<script src="connect.js"></script>
+</head>
+<body onLoad="input_setup({canvas_id:'input_test_canvas'}); connectSetup();">
+
+<!-- Unused at in this version.
+<div id="manual_connect" hidden="true" style="border:1px solid black;">
+	 Game Server IP: <input type="text" id="custom_ip" value="127.0.0.1"><br>
+	 Port: <input type="text" id="custom_port" value="55555"><br>
+	<button onclick="connectPress()">Connect</button>
+</div>
+-->
+
+<div style="margin-left:30px;"><b>Status: </b><span id=status_info>None</span></div>
+<!-- <div align="center"> -->
+<canvas id="input_test_canvas" tabindex="0" style="outline:dotted 1px black; margin:30px;" width="720" height="480"></canvas>
+<!-- </div> -->
+</body>
+</html>

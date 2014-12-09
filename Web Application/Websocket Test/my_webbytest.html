@@ -1,0 +1,34 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<!--
+ - Ryan Merrill
+ - WebSocket Test Client
+ - styled with http://www.digitalcoding.com/tools/html-beautifier.html
+ - W3C Validated
+ - CSS uses font suggestion by 'blixt' on stackoverflow for div sized to character width.
+ - http://stackoverflow.com/a/1255358
+-->
+<head>
+<meta charset="UTF-8" />
+<title>WebSocket Testing Client</title>
+<script src="webby.js"></script>
+</head>
+<body onload="load()">
+<h1>WebSocket Test</h1>
+<div style="border:1px solid black;">
+	 IP:&nbsp;&nbsp;&nbsp;<input type="text" id="custom_ip" value="127.0.0.1"><br>
+	 Port:<input type="text" id="custom_port" value="55555"><br>
+	<button onclick="connectPress()">Connect</button>
+</div>
+<br>
+<div hidden id='connection_div' style="border:1px solid black;">
+	<b>Connection</b><br>
+	 Message:<br>
+	<textarea style="resize: none; font: 15px/1.2 Courier, monospace; width:24em; height:5em; overflow-y:scroll;" id="send_message"></textarea>
+	<button onclick="sendPress()">Send to Server</button><br>
+	<b>Log</b><br>
+	<div id="output" style="color:#ffffff; background-color:#333333; font:15px/1.2 Courier, monospace; width:48em; height:15em; overflow-y:scroll;">
+	</div>
+</div>
+</body>
+</html>
