@@ -1,0 +1,6 @@
+{# Jinja2 Template File #}
+{% include 'header.jj2' %}
+
+<body>
+{{dumptable}}
+{% include 'footer.jj2' %}
