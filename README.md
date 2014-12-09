@@ -3,6 +3,7 @@ Plan Overview
 
 Percentages
 -----------
+
 | Component                                 | Percentage |
 | ---------                                 | ---------- |
 | Full Stack Web Application                | 50         |
