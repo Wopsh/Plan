@@ -1,7 +1,0 @@
-{# Jinja2 Template File #}
-<div class="dropdown">
-Logged in as {{ auth['usernameAmpEscaped'] }}
-<span class="menu" action="/login" method="POST">
-<a href="/log-out"> Log Out</a>
-</span>
-</div>

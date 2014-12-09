@@ -1,9 +1,0 @@
-{# Jinja2 Template File #}
-<!DOCTYPE="HTML">
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<link rel="shortcut icon" href="img/bread.ico" />
-<link rel="stylesheet" type="text/css" href="{{css}}{# css/aqua.css #}" />
-<title>{{title}}</title>
-</head>
