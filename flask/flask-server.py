@@ -3,17 +3,18 @@
 
 #flask imports
 from flask import Flask, render_template, Response, request
-from flask import make_response
+from flask import make_response, redirect
 
 #sqlalchemy
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, CheckConstraint
+from sqlalchemy import Table, Column, Integer, Text, CheckConstraint, Binary
 
 
 #other
-import os,sys
+import os, sys, md5
+from base64 import b64encode, b64decode
 
 debug=True
 
@@ -77,8 +78,9 @@ else: # about to restart
 sql=sqlalchemy
 eng=sql.create_engine('sqlite:///' + working_directory + '/sqlite/sq_userdata.db')
 #eng=sql.create_engine('sqlite:///./sqlite/sq_userdata.db')
+eng.echo=True
+#eng.raw_connection().connection.text_factory = str
 session=sessionmaker(bind=eng)()
-
 
 Base = declarative_base()
 
@@ -88,10 +90,12 @@ class User(Base):
 	#
 	#TODO: have check constraints e.g. CheckConstraint('sqlite string')
 	id = Column(Integer, primary_key=True)
-	username = Column(String, CheckConstraint('length(username) > 0'), unique=True) 
-	password = Column(String, CheckConstraint('length(password) > 5'), unique=True) 
+	username = Column(Text, CheckConstraint('length(username) > 0'), unique=True)
+	salt = Column(Text)
+	password = Column(Text)
+	authToken = Column(Text)
 
-#Base.metadata.create_all(eng)
+Base.metadata.create_all(eng)
 
 for i in session.query(User).order_by(User.id): 
 		print i.username, i.password
@@ -105,8 +109,21 @@ app = Flask(__name__)
 
 @app.route("/login", methods=['GET', 'POST'])
 def loginOut():
-	return "username: {username} password: {password}".format(username=request.form.get('username'),password=request.form.get('password'))
-
+	routeSession=sessionmaker(bind=eng)()
+	#expr = sqlalchemy.update('users').values(name='ZZZZZ')
+	expr= '''
+	UPDATE users
+	SET username="ZZZZZ"
+	WHERE id=0;
+	'''
+	routeSession.execute(expr)
+	formUsername = request.form.get('username')
+	formPassword = request.form.get('password')
+	resp = make_response(redirect('/show_authentication'))
+	#resp.set_cookie('username', formUsername)
+	#resp.set_cookie('password', formPassword)
+	return resp
+	
 @app.route("/register", methods=['GET', 'POST'])
 def registerOut():
 	css='css/aqua.css'
@@ -119,10 +136,12 @@ def registerOut():
 		match = password == passwordRepeat
 		if match:
 			try:
-				session=sessionmaker(bind=eng)()
-				newUser= User(username=username, password=password)
-				session.add(newUser)
-				session.commit()
+				routeSession=sessionmaker(bind=eng)()
+				salt=os.urandom(16)
+				saltedPass=salt+str(password)
+				newUser= User(username=username, password=b64encode(md5.new(saltedPass).digest()), salt=b64encode(salt), )
+				routeSession.add(newUser)
+				routeSession.commit()
 				return "Username '{username}' registered.".format(username=username,password=password)
 			except sqlalchemy.exc.IntegrityError:
 				return "You gave an invalid username or password."
@@ -133,8 +152,9 @@ def registerOut():
 	
 @app.route("/")
 def baseOut():
+	auth=getAuthentication(request)
 	css='css/aqua.css'
-	return render_template('base.jj2',css=css, title='Flask Website')
+	return render_template('base.jj2',css=css, auth=auth, title='Flask Website')
 	
 @app.route("/userdump")
 def userDump():
@@ -160,9 +180,93 @@ def cssOut(path):
 	f = open(path)
 	r= f.read()
 	f.close()
-	return Response(r,mimetype='image/x-icon')
+	return Response(r,mimetype='text/css')
+
+@app.route("/show_authentication")
+def showAuthentication():
+	auth=getAuthentication(request)
+	return Response(str(auth),mimetype='text/html')
+
+
+def getAuthentication(request):
+	# return the user that corresponds to the user's cookie
+	username = request.cookies.get('username')
+	password = request.cookies.get('password')
+	routeSession=sessionmaker(bind=eng)()
+	table=User.__table__
+	#users = Table('users', eng, autoload=True)
+	select=table.select(table.c.username==username)
+	row=eng.execute(select)
+	row = row.fetchone()
+	if row != None:
+		userDictionary = {'id':row[0], 'username':row[1], 'usernameAmpEscaped':escapedToAmpersand(row[1]) }
+		return userDictionary
+	else:
+		return None
+
+def escapedToAmpersand(string):
+	newString=''
+	for char in string :
+		newString+='&#'+str(ord(char))+';'
+	return newString
+
+	
+	
+	
 
 app.run('127.0.0.1',55555,debug=debug) # not using option use_reloader=False
 
 ###################### END OF FLASK PORTION ##############################################
 ####
+
+'''
+from flask import request
+
+@app.route('/')
+def index():
+    username = request.cookies.get('username')
+    # use cookies.get(key) instead of cookies[key] to not get a
+    # KeyError if the cookie is missing.
+Storing cookies:
+
+from flask import make_response
+
+@app.route('/')
+def index():
+    resp = make_response(render_template(...))
+    resp.set_cookie('username', 'the username')
+    return resp
+'''
+#example set cookie http header
+#Set-Cookie: reg_fb_gate=deleted; Expires=Thu, 01-Jan-1970 00:00:01 GMT; Path=/; Domain=.example.com; HttpOnly
+
+#example redirect
+#return redirect(url_for('index'))
+
+'''
+>>> import md5
+>>> m = md5.new()
+>>> m.update("Nobody inspects")
+>>> m.update(" the spammish repetition")
+>>> m.digest()
+'\xbbd\x9c\x83\xdd\x1e\xa5\xc9\xd9\xde\xc9\xa1\x8d\xf0\xff\xe9'
+'''
+
+'''
+salt = os.urandom(16).encode('base_64')
+'''
+
+'''
+To Validate a Password
+
+Retrieve the user's salt and hash from the database.
+Prepend the salt to the given password and hash it using the same hash function.
+Compare the hash of the given password with the hash from the database. If they match, the password is correct. Otherwise, the password is incorrect.
+'''
+'''
+forceascii=lambda x:chr(ord(x)%0xef+1)
+
+randAscii=lambda x : chr(ord(os.urandom(1))%126+1)
+sum=lambda x, y : x + y
+randAsciiString = lambda len :reduce(sum, map(randAscii,'c'*len))
+'''

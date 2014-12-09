@@ -1,7 +1,13 @@
 {# Jinja2 Template File #}
-{% include 'header.jj2' %}
 
+{% include 'header.jj2' %}
 <body>
-{% include 'login-dropdown.jj2' %}
+{% if auth==None %}
+	{% include 'login-dropdown.jj2' %}
+{% else %}
+	{% include 'login-authenticated.jj2' %}
+{% endif %}
 {% include 'server-dummy.jj2' %}
 {% include 'footer.jj2' %}
+</body>
+</html>
