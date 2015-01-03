@@ -116,9 +116,15 @@ def loginOut():
 	#routeSession.commit()
 	formUsername = request.form.get('username')
 	formPassword = request.form.get('password')
-	resp = make_response('yep')#redirect('/show_authentication')
+	resp = make_response(str(authenticate(formUsername,formPassword)))#redirect('/show_authentication')
 	#resp.set_cookie('username', formUsername)
-	#resp.set_cookie('password', formPassword)
+	################# IF AUTHENTICATED (TODO!):
+	authToken=os.urandom(20)
+	routeSession=sessionmaker(bind=eng)()
+	#expr= '''UPDATE users SET authToken="{authToken}" WHERE username="{username}"; '''.format(authToken=b64encode(authToken),username=formUsername)
+	#routeSession.execute(expr)
+	#routeSession.commit()
+	resp.set_cookie('session', authToken)
 	return resp
 	
 @app.route("/register", methods=['GET', 'POST'])
@@ -151,8 +157,16 @@ def registerOut():
 def baseOut():
 	auth=getAuthentication(request)
 	css='css/aqua.css'
-	return render_template('base.jj2',css=css, auth=auth, title='Flask Website')
-	
+	return render_template('base.jj2',css=css, auth=auth, escapedToAmpersand=escapedToAmpersand, title='Flask Website')
+
+@app.route("/log-out")
+def logOut():
+	auth=getAuthentication(request)
+	css='css/aqua.css'
+	response = make_response(render_template('base.jj2',css=css, auth=None, escapedToAmpersand=escapedToAmpersand, title='Flask Website'))
+	response.set_cookie('session', 'expired')
+	return response
+
 @app.route("/userdump")
 def userDump():
 	css='css/aqua.css'
@@ -179,16 +193,28 @@ def cssOut(path):
 	f.close()
 	return Response(r,mimetype='text/css')
 
+
+'''
 @app.route("/show_authentication")
 def showAuthentication():
 	auth=getAuthentication(request)
 	return Response(str(auth),mimetype='text/html')
+'''
 
 
 def getAuthentication(request):
-	# return the user that corresponds to the user's cookie
-	username = request.cookies.get('username')
-	password = request.cookies.get('password')
+	routeSession=sessionmaker(bind=eng)()
+	table=User.__table__
+	sessionToken=request.cookies.get('session')
+	select=table.select(table.c.authToken==sessionToken)
+	row=eng.execute(select)
+	row = row.fetchone()
+	if row != None:
+		return {'username':row[1]}
+	return None
+
+def authenticate(username, password):
+	# return the user that corresponds to the user's credentials
 	routeSession=sessionmaker(bind=eng)()
 	table=User.__table__
 	#users = Table('users', eng, autoload=True)
@@ -196,10 +222,16 @@ def getAuthentication(request):
 	row=eng.execute(select)
 	row = row.fetchone()
 	if row != None:
-		userDictionary = {'id':row[0], 'username':row[1], 'usernameAmpEscaped':escapedToAmpersand(row[1]) }
-		return userDictionary
-	else:
-		return None
+		password=str(password)
+		salt=b64decode(str(row[2]))
+		saltedPassword=salt+password
+		hashedsaltedPassword=md5.new(saltedPassword).digest()
+		correctPassword=b64decode(str(row[3]))==hashedsaltedPassword
+		if correctPassword:
+			userDictionary = {'id':row[0], 'username':row[1]}
+			return userDictionary
+	return None
+
 
 def escapedToAmpersand(string):
 	newString=''
@@ -214,7 +246,6 @@ def escapedToAmpersand(string):
 app.run('127.0.0.1',55555,debug=debug) # not using option use_reloader=False
 
 ###################### END OF FLASK PORTION ##############################################
-####
 
 '''
 from flask import request
