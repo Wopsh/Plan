@@ -118,13 +118,15 @@ def loginOut():
 	formPassword = request.form.get('password')
 	resp = make_response(str(authenticate(formUsername,formPassword)))#redirect('/show_authentication')
 	#resp.set_cookie('username', formUsername)
-	################# IF AUTHENTICATED (TODO!):
-	authToken=os.urandom(20)
-	routeSession=sessionmaker(bind=eng)()
-	#expr= '''UPDATE users SET authToken="{authToken}" WHERE username="{username}"; '''.format(authToken=b64encode(authToken),username=formUsername)
-	#routeSession.execute(expr)
-	#routeSession.commit()
-	resp.set_cookie('session', authToken)
+	################## IF AUTHENTICATED (TODO!):
+	auth=authenticate(formUsername, formPassword)
+	if  auth != None:
+		authToken=b64encode(os.urandom(20))
+		routeSession=sessionmaker(bind=eng)()
+		expr= '''UPDATE users SET authToken="{authToken}" WHERE username="{username}"; '''.format(authToken=authToken, username=formUsername)
+		routeSession.execute(expr)
+		routeSession.commit()
+		resp.set_cookie('session', authToken)
 	return resp
 	
 @app.route("/register", methods=['GET', 'POST'])
@@ -164,7 +166,7 @@ def logOut():
 	auth=getAuthentication(request)
 	css='css/aqua.css'
 	response = make_response(render_template('base.jj2',css=css, auth=None, escapedToAmpersand=escapedToAmpersand, title='Flask Website'))
-	response.set_cookie('session', 'expired')
+	response.set_cookie('session', 'logged-out')
 	return response
 
 @app.route("/userdump")
@@ -193,13 +195,12 @@ def cssOut(path):
 	f.close()
 	return Response(r,mimetype='text/css')
 
-
-'''
-@app.route("/show_authentication")
-def showAuthentication():
+@app.route("/cookie")
+def cookieAuthOut():
 	auth=getAuthentication(request)
-	return Response(str(auth),mimetype='text/html')
-'''
+	sessionToken=request.cookies.get('session')
+	strout='auth={auth} sessionToken={sessionToken}'.format(auth=str(auth), sessionToken=sessionToken.__repr__())
+	return Response(strout,mimetype='text/css')
 
 
 def getAuthentication(request):
