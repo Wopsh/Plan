@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>3D Box</title>
+<script src="three.min.js"></script>
+<script src="geometry.js"></script>
+<script src="canvas_input.js"></script>
+<script src="websocket.js"></script>
+<script src="collision.js"></script>
+<script src="3D.js"></script>
+<!-- add entities higher up later(it uses the scene)-->
+<script src="entities.js"></script>
+</head>
+<body onLoad="setup()">
+<canvas style="border:blue solid 2px;" id="canvas" tabindex="0" width="720" height="480"></canvas>
+<div style="align:left; background-color:#444; visibility:hidden;">
+Game Server IP Address: <input type="text" id="custom_ip" value="127.0.0.1"><br>
+	 Port: <input type="text" id="custom_port" value="55555"><br>
+	<button onclick="connectPress()">Connect</button>
+</div>
+</body>
+</html
