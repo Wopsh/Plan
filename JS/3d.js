@@ -38,6 +38,9 @@ game.player=player;
 
 var f1,f2,f3,f4;
 
+var c1,c2;
+
+
 function setup(){
 	//canvas = document.getElementById('canvas')
 	input_setup({canvas_id:'canvas', get_pointer_lock:false})
@@ -77,6 +80,9 @@ function setup(){
 	scene.add( box );
 	scene.add( box2 );
 	skybox();
+
+	c1 = new CMesh({mesh:box})
+	c2 = new CMesh({mesh:box2})
 
 	make_ground();
 	scene.add(ground);
@@ -206,9 +212,11 @@ function render() {
 	
 	
 	//camera.rotation.y=-player.rot;
-	box.rotation.x+=0.01;
-	box.rotation.y+=0.03333333333;
-	box.rotation.z+=0.00777777777;
+	//box.rotation.x+=0.01;
+	//box.rotation.y+=0.03333333333;
+	//box.rotation.z+=0.00777777777;
+	if(c1.collides(c2)){box.material.ambient.setHex(0xFF00FF)}
+	else{ box.material.ambient.setHex(0x00FF00)}
 	
 	square.rotation.z+=0.00;
 	square.rotation.x+=0.03;

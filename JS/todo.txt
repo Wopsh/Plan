@@ -1,0 +1,1 @@
+Collision almost works but is slightly off clone collides function to give the lines it thinks are colliding

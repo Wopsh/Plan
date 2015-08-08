@@ -41,8 +41,8 @@ function edgePlanes(triangle){
 //CONTACT POINT with triangle must be (interior / contacting) edge planes
 // make three planes flush with each edge of a triangle
 var baseNormal=triangleNormal(triangle)
-console.log('base normal:')
-console.log(baseNormal)
+//console.log('base normal:')
+//console.log(baseNormal)
 // make a triangle for each edge
 var a=triangle.a;
 var b=triangle.b;
@@ -60,25 +60,6 @@ var pab={point:a, normal:nab};
 var pbc={point:b, normal:nbc};
 var pca={point:c, normal:nca};
 return [pab, pbc, pca];
-}
-
-//triangle to  triangle collision test
-function triangle_intersects_triangle(triangle_a, triangle_b){
-// proof of concept function
-// concept didn't work
-edges=edgePlanes(triangle_b)
-a=has_interiority(triangle_a.a, edges[0])&& has_interiority(triangle_a.a, edges[1]) && has_interiority(triangle_a.a, edges[2]);
-b=has_interiority(triangle_a.b, edges[0])&& has_interiority(triangle_a.b, edges[1]) && has_interiority(triangle_a.b, edges[2]);
-c=has_interiority(triangle_a.c, edges[0])&& has_interiority(triangle_a.c, edges[1]) && has_interiority(triangle_a.c, edges[2]);
-console.log('test triangle:')
-console.log(triangle_a)
-console.log('test triangle edges:')
-console.log(edges)
-console.log('has interiority to edges 0, 1, 2')
-console.log(has_interiority(triangle_a.c, edges[0]));
-console.log(has_interiority(triangle_a.c, edges[1]));
-console.log(has_interiority(triangle_a.c, edges[2]));
-return [a,b,c];
 }
 
 
@@ -109,19 +90,12 @@ tNormal=triangleNormal(t);
 tPlane={point:t.a, normal:tNormal}
 
 }
-/*
-test stuff
-n=normalize(vector(0,0,1))
-p=vector(0,0,0)
-pln={point:p,normal:n}
-rate_of_exterior_approach(vector(0,1,0),pln)
-*/
 
 function v2v3(v)
 {//vector to THREE vector
 	return vector(v.x, v.y, v.z)
 }
-// TODO use only THREE.vector3s
+// TODO ? use only THREE.vector3s
 function v3tov(v)
 {//vector to THREE vector
 	return vector(v.x, v.y, v.z)
@@ -252,31 +226,32 @@ edges=edgePlanes(tri)
 if(!line_intersects_or_contacts_plane(line,plane))return false;
 distance = distance_from_plane(line.point, plane);
 span_normal=normalize(line.span)
-console.log('span_normal:'+vectorString(span_normal));
-console.log('distance:'+distance);
-console.log('distance scaled normal:'+vectorString(vectorScale(span_normal, distance)));
+//console.log('span_normal:'+vectorString(span_normal));
+//console.log('distance:'+distance);
+//console.log('distance scaled normal:'+vectorString(vectorScale(span_normal, distance)));
 contact_point=vectorSum(line.point, vectorScale(span_normal, distance));
 if(!pointPlaneTest(contact_point, edges[0]) && !point_has_contact_with_plane(contact_point, edges[0])) return false;
 if(!pointPlaneTest(contact_point, edges[1]) && !point_has_contact_with_plane(contact_point, edges[1])) return false;
-if(!pointPlaneTest(contact_point, edges[2]) && !point_has_contact_with_plane(contact_point, edges[2])){
-	console.log(edges[2]);
-	console.log(contact_point);
-	return false;
-	}
+if(!pointPlaneTest(contact_point, edges[2]) && !point_has_contact_with_plane(contact_point, edges[2]))return false;
+	
 return true;
 }
 
-function Cmesh(ob){
+function CMesh(ob){
 //todo: bounding box or distance check
+//todo: rotation for cmesh not from three.js mesh
 if(ob.tris!=null)
 {
 this.tris=object.tris
 }
 if(ob.mesh!=null)
 {
-if(ob.mesh instanceof THREE.Mesh) {this.tris=collision_meshinate(ob.mesh.geometry); this.pos=ob.mesh.position;}
-else {this.tris = ob.mesh}
-this.lines=tris_to_lines_pruned(this.tris);
+	if(ob.mesh instanceof THREE.Mesh) {this.tris=collision_meshinate(ob.mesh.geometry);
+	this.pos=ob.mesh.position;
+	this.rotation=ob.mesh.rotation;
+	}
+	else {this.tris = ob.mesh}
+	this.lines=tris_to_lines_pruned(this.tris);
 }
 if(ob.pos!=null){
 //object
@@ -284,18 +259,34 @@ this.pos = ob.pos
 }
 }
 
-Cmesh.prototype.collides=function(othermesh){
+CMesh.prototype.collides=function(othermesh){
 	for(i=0; i<this.tris.length; i++){
 		tri=this.tris[i]
+		tri=rotate_triangle(tri, this.rotation)
 		for(j=0; j<othermesh.lines.length; j++){
 			line=othermesh.lines[j];
+			line=rotate_line(line,this.rotation)
 			//translate by moving origin of line
 			o=vectorSum(line.point, this.pos)
 			o=vectorDifference(o, othermesh.pos)
 			lineTranslated={point:o, span:vectorClone(line.span)}
-			if(line_intersects_tri(lineTranslated, tri)==true){console.log(line); console.log(tri); return 'collision true'}
+			if(line_intersects_tri(lineTranslated, tri)==true){return true}
 		}
 	}
+	for(i=0; i<othermesh.tris.length; i++){
+		tri=othermesh.tris[i]
+		tri=rotate_triangle(tri, othermesh.rotation)
+		for(j=0; j<this.lines.length; j++){//
+			line=this.lines[j];//
+			line=rotate_line(line,othermesh.rotation)
+			//translate by moving origin of line
+			o=vectorSum(line.point, othermesh.pos)
+			o=vectorDifference(o, this.pos)//
+			lineTranslated={point:o, span:vectorClone(line.span)}
+			if(line_intersects_tri(lineTranslated, tri)==true){return true}
+		}
+	}
+	return false
 }
 
 function collision_meshinate(geometry){
@@ -344,6 +335,7 @@ function tris_to_lines_pruned(tris_array){
 function pointPairStringID(pair){
 //converts line to string. sorts points so same lines don't have same string
 //optimization note: not passing as array woulda been faster
+//js strings might be slow
 	if(pair[0].x!=pair[1].x)
 	{
 		return (pair[0].x<pair[1].x) ? vectorString(pair[0])+ ',' + vectorString(pair[0]) : vectorString(pair[1])+ ',' + vectorString(pair[0]);
@@ -357,38 +349,30 @@ function pointPairStringID(pair){
 	return vectorString(pair[0])+ ',' + vectorString(pair[0]);
 }
 
-/*
-function prune_faces(tri_array){
-	// THREE faces are abc objects w other properties like material and color
-	facesArray=[]
-	for(i=0; i<faces.length; i++)
-	{
-		face=faces[i].slice().sort() //deep copy inner face and sort order of vertices 
-		facesArray.push(face)
-	}
-	facesSortedArray=facesArray.sort();
-	facesPrunedArray=[];
-	console.log('soreted array for pruning:')
-	console.log(facesSortedArray);
-	facesPrunedArray.push(facesSortedArray[0])
-	for(i=1; i<facesSortedArray.length; i++){
-		face=facesSortedArray[i]
-		prevFace=facesPrunedArray[facesPrunedArray.length-1]
-		if(face.a != prevFace.a && face.b != prevFace.b && face.c != prevFace.c) // fix this abc or [012]???
-		{
-			facesPrunedArray.push(face);
-		}
-	}
-	return facesPrunedArray;
-}
-*/
 
 function rotate_point(point, rot_vector){
 //extrinsic zyx order to simulate three.js intrinsic xyz order
-point=x_rotate_point(point,rot_vector);
-point=y_rotate_point(point,rot_vector);
 point=z_rotate_point(point,rot_vector);
+point=y_rotate_point(point,rot_vector);
+point=x_rotate_point(point,rot_vector);
 return point;
+}
+
+function rotate_triangle(tri, rot_vector){
+ntri={};
+ntri.a=rotate_point(tri.a, rot_vector);
+ntri.b=rotate_point(tri.b, rot_vector);
+ntri.c=rotate_point(tri.c, rot_vector);
+return ntri;
+}
+
+function rotate_line(line, rot_vector){
+// method: convert span format to pointa-pointb format
+// then rotate those points then convert back to point-span
+pointb=rotate_point(vectorSum(line.point,line.span),rot_vector);
+pointa=rotate_point(line.point,rot_vector);
+nspan=vectorDifference(pointb,pointa)
+return {point:pointa, span:nspan}
 }
 
 function x_rotate_point(point,rots){
