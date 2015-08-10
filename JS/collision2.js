@@ -85,6 +85,11 @@ GVector.prototype.normal = function()
 	return this.scalarQuotient(length);
 }
 
+GVector.prototype.absoluteValue=function ()
+{
+	return new GVector(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z))
+}
+
 GVector.prototype.toString = function()
 {
 	return "[object GVector " + "{" + "x:" + this.x + "y:" + this.y + "z:" + this.z + "}" + "]"
@@ -94,3 +99,41 @@ GVector.prototype.clone = function()
 {
 	return new GVector(this.x,this.y,this.z);
 }
+
+
+
+/* 
+Collision Plane "Class"
+This class stores/describes planes using a point (found anywhere on the plane) and
+a normal vector (one of two possible orthogonal vectors that point away from the plane).
+The point gives the plane's position and the normal vector shows how the plane is inclined.
+
+Sometimes it is important to distinguish the two sides of a plane.
+The region of space that the normal points toward is considered the exterior side.
+*/
+
+GPlane = function(point, normal){
+	this.point=point;
+	this.normal=normal;
+}
+
+GPlane.prototype.distanceToPoint(point)
+{
+	// v is a vector from the refence point of the plane to
+	// the point we are calculating the distance to.
+	var v = GVector.difference(point, this.point)
+	var distance = GVector.dotProduct(this.normal,v).absoluteValue()
+
+}
+
+
+/*
+GDemo contains sample instances of geometry classes
+
+*/
+
+GDemo =
+{
+	xZPlane:new GPLane(new GVector(0,0,0), new GVector(0,1,0))
+}
+
