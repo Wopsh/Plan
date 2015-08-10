@@ -176,12 +176,12 @@ function render() {
 	d   68
 	*/
 	if(keyStates[UP]==='DOWN'){
-		player.pos.z-=Math.cos(player.rot);
-		player.pos.x+=Math.sin(player.rot);
+		player.pos.z-=0.1 * Math.cos(player.rot);
+		player.pos.x+=0.1 * Math.sin(player.rot);
 	}
 	if(keyStates[DOWN]==='DOWN'){
-		player.pos.z+=Math.cos(player.rot);
-		player.pos.x-=Math.sin(player.rot);
+		player.pos.z+=0.1 * Math.cos(player.rot);
+		player.pos.x-=0.1 * Math.sin(player.rot);
 	}
 	if(keyStates[LEFT]==='DOWN'){
 		player.rot-=0.08;
