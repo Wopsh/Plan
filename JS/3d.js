@@ -215,8 +215,8 @@ function render() {
 	//box.rotation.x+=0.01;
 	//box.rotation.y+=0.03333333333;
 	//box.rotation.z+=0.00777777777;
-	if(c1.collides(c2)){box.material.ambient.setHex(0xFF00FF)}
-	else{ box.material.ambient.setHex(0x00FF00)}
+	if(c1.collides(c2)){box.material.ambient.setHex(0xFF00FF); box.material.color.setHex(0xFF00FF)}
+	else{ box.material.ambient.setHex(0x00FF00); box.material.color.setHex(0x00FF00)}
 	
 	square.rotation.z+=0.00;
 	square.rotation.x+=0.03;
