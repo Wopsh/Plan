@@ -42,9 +42,9 @@ GVector.prototype.scalarProduct = function(scalar)
 	return GVector.scalarProduct(this, scalar);
 }
 
-GVector.scalarQuotient = function(vector,scalar)
+GVector.scalarQuotient = function(vector,scalar) //TODO: rename divide by scalar
 {
-	return new GVector(vector.x / scalar, vector.y / scalar, vector.z / scalar);
+	return new GVector(vector.x/scalar, vector.y/scalar, vector.z/scalar);
 }
 GVector.prototype.scalarQuotient = function(scalar)
 {
@@ -56,19 +56,26 @@ GVector.prototype.sum=function(b)
 {
 	// this function, when called with no arguments returns a scalar Number.
 	// else takes vector argument and returns sum of this vector with that vector as new vector
-	if(arguments.length==0 && b==undefined)
+	if(b!=undefined)
 	{
-		return this.x + this.y + this.z;
+		return new GVector(this.x + b.x, this.y + b.y, this.z + b.z)
 	}
-	else
-	{
-	return new GVector(this.x + b.x, this.y + b.y, this.z + b.z)
-	}
+	return this.x + this.y + this.z
 }
 
 GVector.sum=function (a, b)
 {
 	return new GVector(a.x + b.x, a.y + b.y, a.z + b.z)
+}
+
+GVector.average=function (manyArgs)
+{
+	var total=new GVector(0,0,0)
+	for(var i=0; i<arguments.length; i++)
+	{
+		total = total.sum(arguments[i])
+	}
+	return total.scalarQuotient(arguments.length)
 }
 
 GVector.difference=function (a, b)
@@ -99,6 +106,11 @@ GVector.prototype.absoluteValue=function ()
 	return new GVector(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z))
 }
 
+GVector.prototype.equals=function (equalsArgVectorB)
+{
+	return this.x==equalsArgVectorB.x && this.y==equalsArgVectorB.y && this.z ==equalsArgVectorB.z;
+}
+
 console.log('collsion 2 mid 0')
 
 
@@ -112,6 +124,10 @@ GVector.prototype.clone = function()
 	return new GVector(this.x,this.y,this.z);
 }
 
+GVector.prototype.THREEVector3 = function()
+{
+	return new THREE.Vector3(this.x,this.y,this.z);
+}
 console.log('collsion 2 mid 0.5')
 
 
@@ -133,6 +149,18 @@ function GPlane(point, normal)
 
 console.log('collsion 2 mid 1')
 
+
+/*
+Test Theory
+THEORY: scalar sum of the components of the dot product of a vector V with a
+normal vector N is the length that the vector V moves along the axis defined by
+the normal vector N.
+
+e.g. given normal N and vector V:
+	The signed length V extends along the axis defined by N is
+		scalarSum(dotProduct(N,V))
+*/
+
 GPlane.prototype.distanceToPoint = function(point)
 {
 	// v is a vector from the refence point of the plane to
@@ -140,6 +168,59 @@ GPlane.prototype.distanceToPoint = function(point)
 	var v = GVector.difference(point, this.point)
 	var distance = Math.abs(GVector.dotProduct(this.normal,v).sum())// remove abs for signed distance
 	return distance;
+}
+
+GPlane.prototype.signedDistanceToPoint = function(point)
+{
+	// v is a vector from the refence point of the plane to
+	// the point we are calculating the distance to.
+	// distance is 
+	var v = GVector.difference(point, this.point)
+	var distance = GVector.dotProduct(this.normal,v).sum()
+	return distance;
+}
+
+GPlane.prototype.crossedByLine = function(line)
+{
+	var aDist=this.signedDistanceToPoint(line.a)
+	var bDist=this.signedDistanceToPoint(line.b)
+	return aDist * bDist < 0
+
+}
+
+
+GPlane.prototype.isLineParallel = function(line)
+{
+	var aDist=this.signedDistanceToPoint(line.a)
+	var bDist=this.signedDistanceToPoint(line.b)
+	return aDist==0 && bDist==0;
+
+}
+
+
+GPlane.prototype.crossingPointOfLine = function(line)
+{
+	if(this.isLineParallel(line)){throw "line is parallel crossingPointOfline is null "; return null;}
+	if(!this.touchedByLine(line)){throw "line does not touch crossingPointOfline null result"; return null;}
+	var dist = this.distanceToPoint(line.a)
+	var approachRateAtoB = Math.abs(this.signedDistanceOnNormalAxis(line.aToB().normal()))
+	var approachLength = dist/approachRateAtoB
+	var approachVector = line.aToB().normal().scalarProduct(approachLength)
+	return GVector.sum(approachVector, line.a)
+
+}
+
+GPlane.prototype.touchedByLine= function(line)
+{
+	var aDist=this.signedDistanceToPoint(line.a)
+	var bDist=this.signedDistanceToPoint(line.b)
+	return (aDist * bDist < 0) || (aDist * bDist == 0)
+}
+
+
+GPlane.prototype.signedDistanceOnNormalAxis = function(vector)
+{
+	return GVector.dotProduct(this.normal, vector).sum()
 }
 
 GPlane.prototype.isPointExterior = function(point)
@@ -159,7 +240,7 @@ function GTriangle(pointA, pointB, pointC)
 	this.c=pointC.clone()
 }
 
-GTriangle.prototype.normal = function triangleNormal(){
+GTriangle.prototype.normal = function(){
 // the points on the triangle (a,b, and c) should appear counerclockwise
 // on the side of the triangle that the chosen normal points to. This is
 // to be consistent with openGL conventions.
@@ -168,19 +249,61 @@ var b =new GVector(this.b.x-this.a.x, this.b.y-this.a.y, this.b.z-this.a.z);
 return GVector.crossProduct(a, b).normal();
 }
 
-GTriangle.prototype.plane = function triangleNormal(){
+GTriangle.prototype.centroid = function(){
+return GVector.average(this.a, this.b, this.c)
+}
+
+GTriangle.prototype.plane = function(){
 return new GPlane(this.a, this.normal())
 }
 
 
 GTriangle.prototype.edgePlanes = function(){
 	//TODO:? use crossproduct directly to get planes no need to make a triangle.
+	//TODO: ensure that edgeplane normals point outward
+	var centroid = this.centroid();
+	// exterior signed distance to centroid should be negative
 	var normal = this.normal()
 	var ab = (new GTriangle(this.a, this.b, this.a.sum(normal))).plane()
 	var bc = (new GTriangle(this.b, this.c, this.b.sum(normal))).plane()
 	var ca = (new GTriangle(this.c, this.a, this.c.sum(normal))).plane()
+	if(ab.isPointExterior(centroid)){console.log("warning: ab edgeplane normal was inverted"); ab=ab.scalarProduct(-1)}
+	if(bc.isPointExterior(centroid)){console.log("warning: bc edgeplane  normal was inverted"); bc=bc.scalarProduct(-1)}
+	if(ca.isPointExterior(centroid)){console.log("warning: ca edgeplane normal was inverted"); ca=ca.scalarProduct(-1)}
 	return [ab,bc,ca];
 
+}
+
+// TODO:
+/*
+MEGA TODO: LINES PARALELL TO PLANES DO NOT COLLISION DETECT PROPERLY
+MULTIPLE CROSSING POINTS MAY EXIST!
+FIX CROSSING TO ONLY INCLUDE TRULY CROSSING LINES
+IN PARALLEL LINES PLANE DISTANCE TO A AND B POINTS ARE ZERO
+WHEN PARALLEL CROSSING AN EDGEPLANE DETERMINES TRIANGLE INTERCEPT
+
+
+*/
+
+GTriangle.prototype.crossedByLine = function(line){
+	// if line does not cross main plane return false
+	// if line crosses main plane find crossing point
+	// if crossing point within edgeplanes return true
+	var edgePlanes=this.edgePlanes()
+	if(this.plane().isLineParallel(line))
+	{
+		if(edgePlanes[0].crossedByLine(line))return true;
+		if(edgePlanes[1].crossedByLine(line))return true;
+		if(edgePlanes[2].crossedByLine(line))return true;
+		return false;
+	}
+	if(!this.plane().touchedByLine(line))return false;
+	var crossingpoint = this.plane().crossingPointOfLine(line);
+	if(edgePlanes[0].isPointExterior(crossingpoint))return false;
+	if(edgePlanes[1].isPointExterior(crossingpoint))return false;
+	if(edgePlanes[2].isPointExterior(crossingpoint))return false;
+	return true;
+	
 }
 
 console.log('collsion 2 mid 2')
@@ -193,10 +316,19 @@ function GLine(PointA, PointB){
 
 }
 
+GLine.prototype.aToB=function(){
+	return GVector.difference(this.b,this.a);
+}
+
+GLine.prototype.bToA=function(){
+	return GVector.difference(this.a,this.b);
+}
+
 GLine.prototype.crossesPlane=function(plane){
 	return plane.isPointExterior(this.a)!=plane.isPointExterior(this.b)
 }
 
+console.log('nother log')
 
 var GDemo =
 {
@@ -212,18 +344,118 @@ var GDemo =
 	line:new GLine(new GVector(0,0,0),new GVector(0,-1,0))
 };
 
+console.log('llorando log')
 
-function GCollisionMesh(THREEMesh){
-var faces=THREEMesh.faces
-var vertices=THREEMesh.vertices
-var lines=[]
-for(var i=0; i<faces.length; i++){
-	lines.push(new GVector(vertices[faces[i].a], new GVector(vertices[faces[i].b]);
-	lines.push(new GVector(vertices[faces[i].b], new GVector(vertices[faces[i].c]);
-	lines.push(new GVector(vertices[faces[i].c], new GVector(vertices[faces[i].a]);
+function GCollisionMesh(arg){
+	var THREEJSGeometry,position,rotation;
+	if(arg instanceof THREE.Geometry)
+	{
+		THREEJSGeometry=arg;
+	}
+	if(arg instanceof THREE.Mesh)
+	{
+		THREEJSGeometry= arg.geometry;
+	}
+	
+	var faces=THREEJSGeometry.faces
+	var vertices=THREEJSGeometry.vertices
+	this.lines=[]
+	for(var i=0; i<faces.length; i++){
+		var THREEA = vertices[faces[i].a]
+		var THREEB = vertices[faces[i].b]
+		var THREEC = vertices[faces[i].c]
+		var a=new GVector(THREEA.x, THREEA.y, THREEA.z)
+		var b=new GVector(THREEB.x, THREEB.y, THREEB.z)
+		var c=new GVector(THREEC.x, THREEC.y, THREEC.z)
+		var lineAB = new GLine(a,b)
+		var lineBC = new GLine(b,c)
+		var lineCA = new GLine(c,a)
+		this.lines.push(lineAB, lineBC, lineCA)
+	}
+	this.lines=GHelpers.pruneSameLines(this.lines);
+	this.tris=[]
+	for(var i=0; i<faces.length; i++){
+		var THREEA = vertices[faces[i].a]
+		var THREEB = vertices[faces[i].b]
+		var THREEC = vertices[faces[i].c]
+		var a=new GVector(THREEA.x, THREEA.y, THREEA.z)
+		var b=new GVector(THREEB.x, THREEB.y, THREEB.z)
+		var c=new GVector(THREEC.x, THREEC.y, THREEC.z)
+		this.tris.push(new GTriangle(a,b,c));
+	}
 }
-return lines
+
+
+GCollisionMesh.prototype.THREELines = function(){
+	var material = new THREE.LineBasicMaterial({color:0xFFFFFF})
+	var geometry = new THREE.Geometry();
+	for(var i=0; i<this.lines.length; i++){
+		var line=this.lines[i]
+		geometry.vertices.push(line.a.THREEVector3())
+		geometry.vertices.push(line.b.THREEVector3())
+	}
+	return new THREE.Line(geometry, material, THREE.LinePieces)
 }
+
+GCollisionMesh.prototype.collide=function(){
+
+}
+
+console.log('ayudalog')
+var GHelpers=function(){}
+
+
+GHelpers.constructSortedLine=function(line){
+		if(GHelpers.compareVector(line.a,line.b))
+		{
+			return new GLine(line.a,line.b);
+		}
+		else 
+		{
+		return new GLine(line.b,line.a);
+		}
+}
+
+console.log('aaaaa')
+
+GHelpers.linesAreEqual=function(lineA,lineB){
+	var lineASorted=GHelpers.constructSortedLine(lineA);
+	var lineBSorted=GHelpers.constructSortedLine(lineB);
+	return lineASorted.a.equals(lineBSorted.a) && lineASorted.b.equals(lineBSorted.b);
+}
+
+GHelpers.compareVector=function(a,b){
+	if(a.x<b.x){return true}
+	if(a.x>b.x){return false}
+	if(a.y<b.y){return true}
+	if(a.y>b.y){return false}
+	if(a.z<b.z){return true}
+	if(a.z>b.z){return false}
+	return true;
+}
+
+console.log('bbbb')
+	
+
+GHelpers.pruneSameLines=function(linesArray){
+	var finalLinesArray=[]
+	finalLinesArray.push(linesArray[0])
+	for(var i=1; i<linesArray.length; i++)
+	{
+		var line=linesArray[i]
+		var matched=false;
+		for(var j=0; j<finalLinesArray.length; j++)
+		{
+			if(GHelpers.linesAreEqual(line,finalLinesArray[j]))
+			{
+				matched=true;
+			}
+		}
+		if(!matched)finalLinesArray.push(line)
+	}
+	return finalLinesArray
+}
+
 
 console.log('collsion 2 ok')
 
