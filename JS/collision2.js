@@ -13,6 +13,36 @@ function GVector(x,y,z)//constructor
 	this.z=z;
 }
 
+GVector.prototype.intrinsicRotateXYZ=function(xRotation,yRotation,zRotation){
+	//uses extrinsic rotations in reverse order
+	return this.rotateZ(zRotation).rotateY(yRotation).rotateX(xRotation)
+
+}
+
+GVector.prototype.rotateX=function(xRotation){
+var ca=Math.cos(-xRotation)
+var sa=Math.sin(-xRotation)
+var ny=this.y * ca + this.z * sa
+var nz=this.z * ca - this.y * sa
+return new GVector(this.x,ny,nz)
+}
+
+GVector.prototype.rotateY=function(yRotation){
+var ca=Math.cos(-yRotation)
+var sa=Math.sin(-yRotation)
+var nx=this.x * ca - this.z * sa
+var nz=this.z * ca + this.x * sa
+return new GVector(nx,this.y,nz)
+}
+
+GVector.prototype.rotateZ=function(zRotation){
+var ca=Math.cos(-zRotation)
+var sa=Math.sin(-zRotation)
+var nx=this.x * ca + this.y * sa
+var ny=this.y * ca - this.x * sa
+return new GVector(nx,ny,this.z)
+}
+
 GVector.prototype.dotProduct = function(b)
 {
 	return new GVector(this.x * b.x, this.y * b.y, this.z * b.z);
@@ -347,7 +377,7 @@ var GDemo =
 console.log('llorando log')
 
 function GCollisionMesh(arg){
-	var THREEJSGeometry,position,rotation;
+	var THREEJSGeometry;
 	if(arg instanceof THREE.Geometry)
 	{
 		THREEJSGeometry=arg;
@@ -355,6 +385,8 @@ function GCollisionMesh(arg){
 	if(arg instanceof THREE.Mesh)
 	{
 		THREEJSGeometry= arg.geometry;
+		this.rotation=arg.rotation;
+		this.position=arg.position;
 	}
 	
 	var faces=THREEJSGeometry.faces
@@ -385,20 +417,77 @@ function GCollisionMesh(arg){
 	}
 }
 
+console.log('bumpy lumpy humps')
+
+GCollisionMesh.prototype.rotatedLine=function(line){
+	var a=line.a.intrinsicRotateXYZ(this.rotation.x,this.rotation.y,this.rotation.z);
+	var b=line.b.intrinsicRotateXYZ(this.rotation.x,this.rotation.y,this.rotation.z);
+	return new GLine(a,b);
+}
+
+GCollisionMesh.prototype.rotatedTriangle=function(tri){
+	var a=tri.a.intrinsicRotateXYZ(this.rotation.x,this.rotation.y,this.rotation.z);
+	var b=tri.b.intrinsicRotateXYZ(this.rotation.x,this.rotation.y,this.rotation.z);
+	var c=tri.c.intrinsicRotateXYZ(this.rotation.x,this.rotation.y,this.rotation.z);
+	return new GTriangle(a,b,c)
+}
+
+GCollisionMesh.prototype.translatedLine=function(line){
+	var a=GVector.sum(line.a, this.position)
+	var b=GVector.sum(line.b, this.position)
+	return new GLine(a,b);
+}
+
+GCollisionMesh.prototype.translatedTriangle=function(tri){
+	var a=GVector.sum(tri.a, this.position)
+	var b=GVector.sum(tri.b, this.position)
+	var c=GVector.sum(tri.c, this.position)
+	return new GTriangle(a,b,c);
+}
+
+console.log('slippery dippery long mover')
 
 GCollisionMesh.prototype.THREELines = function(){
 	var material = new THREE.LineBasicMaterial({color:0xFFFFFF})
 	var geometry = new THREE.Geometry();
 	for(var i=0; i<this.lines.length; i++){
 		var line=this.lines[i]
+		line=this.rotatedLine(line)
+		line=this.translatedLine(line)
 		geometry.vertices.push(line.a.THREEVector3())
 		geometry.vertices.push(line.b.THREEVector3())
 	}
 	return new THREE.Line(geometry, material, THREE.LinePieces)
 }
 
-GCollisionMesh.prototype.collide=function(){
-
+GCollisionMesh.prototype.collide=function(bCollisionMesh){
+	for(var i=0; i<this.lines.length; i++)
+	{
+		var line=this.lines[i]
+		line=this.rotatedLine(line)
+		line=this.translatedLine(line)
+		for(var j=0; j<bCollisionMesh.tris.length; j++)
+		{
+			var tri=bCollisionMesh.tris[j]
+			tri=bCollisionMesh.rotatedTriangle(tri)
+			tri=bCollisionMesh.translatedTriangle(tri)
+			if(tri.crossedByLine(line)){return true;}
+		}
+	}
+	for(var i=0; i<bCollisionMesh.lines.length; i++)
+	{
+		var line=bCollisionMesh.lines[i]
+		line=bCollisionMesh.rotatedLine(line)
+		line=bCollisionMesh.translatedLine(line)
+		for(var j=0; j<this.tris.length; j++)
+		{
+			var tri=this.tris[j]
+			tri=this.rotatedTriangle(tri)
+			tri=this.translatedTriangle(tri)
+			if(tri.crossedByLine(line)){return true;}
+		}
+	}
+	return false;
 }
 
 console.log('ayudalog')
