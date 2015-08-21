@@ -241,7 +241,6 @@ GPlane.prototype.crossingPointOfLine = function(line)
 	var approachLength = dist/approachRateAtoB
 	var approachVector = line.aToB().normal().scalarProduct(approachLength)
 	return GVector.sum(approachVector, line.a)
-
 }
 
 GPlane.prototype.touchedByLine= function(line)
