@@ -13,6 +13,10 @@ function GVector(x,y,z)//constructor
 	this.z=z;
 }
 
+GVector.prototype.constructionString=function(){
+	return 'new GVector('+this.x+', '+this.y+', '+this.z+')';
+}
+
 GVector.prototype.intrinsicRotateXYZ=function(xRotation,yRotation,zRotation){
 	//uses extrinsic rotations in reverse order
 	return this.rotateZ(zRotation).rotateY(yRotation).rotateX(xRotation)
@@ -270,6 +274,14 @@ function GTriangle(pointA, pointB, pointC)
 	this.c=pointC.clone()
 }
 
+GTriangle.prototype.constructionString = function(){
+	var string='new GTriangle('
+	string=string+this.a.constructionString() + ', ';
+	string=string+this.b.constructionString() + ', ';
+	string=string+this.c.constructionString() + ')';
+	return string
+}
+
 GTriangle.prototype.normal = function(){
 // the points on the triangle (a,b, and c) should appear counerclockwise
 // on the side of the triangle that the chosen normal points to. This is
@@ -285,6 +297,21 @@ return GVector.average(this.a, this.b, this.c)
 
 GTriangle.prototype.plane = function(){
 return new GPlane(this.a, this.normal())
+}
+
+GTriangle.prototype.clone=function(){
+	return new GTriangle(this.a, this.b, this.c);
+}
+
+GTriangle.prototype.THREEMesh = function(){
+	var material = new THREE.MeshBasicMaterial({color:0x222288})
+	var geometry = new THREE.Geometry();
+	geometry.vertices.push(this.a.THREEVector3())
+	geometry.vertices.push(this.b.THREEVector3())
+	geometry.vertices.push(this.c.THREEVector3())
+	geometry.faces.push(new THREE.Face3(0,1,2))
+	geometry.faces.push(new THREE.Face3(2,1,0))
+	return new THREE.Mesh(geometry, material)
 }
 
 
@@ -322,9 +349,18 @@ GTriangle.prototype.crossedByLine = function(line){
 	var edgePlanes=this.edgePlanes()
 	if(this.plane().isLineParallel(line))
 	{
-		if(edgePlanes[0].crossedByLine(line))return true;
-		if(edgePlanes[1].crossedByLine(line))return true;
-		if(edgePlanes[2].crossedByLine(line))return true;
+		if
+			(
+				!edgePlanes[0].isPointExterior(line.a) &&
+				!edgePlanes[1].isPointExterior(line.a) &&
+				!edgePlanes[2].isPointExterior(line.a)
+			){return true;}
+		if
+			(
+				!edgePlanes[0].isPointExterior(line.b) &&
+				!edgePlanes[1].isPointExterior(line.b) &&
+				!edgePlanes[2].isPointExterior(line.b)
+			){return true;}
 		return false;
 	}
 	if(!this.plane().touchedByLine(line))return false;
@@ -336,6 +372,7 @@ GTriangle.prototype.crossedByLine = function(line){
 	
 }
 
+
 console.log('collsion 2 mid 2')
 
 
@@ -344,6 +381,21 @@ function GLine(PointA, PointB){
 	this.a = PointA.clone()
 	this.b = PointB.clone()
 
+}
+
+GLine.prototype.THREELine = function(){
+	var material = new THREE.LineBasicMaterial({color:0xFF55FF})
+	var geometry = new THREE.Geometry();
+	geometry.vertices.push(this.a.THREEVector3())
+	geometry.vertices.push(this.b.THREEVector3())
+	return new THREE.Line(geometry, material, THREE.LinePieces)
+}
+
+GLine.prototype.construnctionString=function(){
+	var string='new GLine('
+	string=string+this.a.constructionString() + ', ';
+	string=string+this.b.constructionString() + ')';
+	return string
 }
 
 GLine.prototype.aToB=function(){
@@ -356,6 +408,10 @@ GLine.prototype.bToA=function(){
 
 GLine.prototype.crossesPlane=function(plane){
 	return plane.isPointExterior(this.a)!=plane.isPointExterior(this.b)
+}
+
+GLine.prototype.clone=function(){
+	return new GLine(this.a,this.b);
 }
 
 console.log('nother log')
@@ -415,6 +471,8 @@ function GCollisionMesh(arg){
 		var c=new GVector(THREEC.x, THREEC.y, THREEC.z)
 		this.tris.push(new GTriangle(a,b,c));
 	}
+	this.lastCollidedTriangle=null;
+	this.lastCollidedLine=null;
 }
 
 console.log('bumpy lumpy humps')
@@ -460,6 +518,23 @@ GCollisionMesh.prototype.THREELines = function(){
 	return new THREE.Line(geometry, material, THREE.LinePieces)
 }
 
+GCollisionMesh.prototype.THREETriangles = function(){
+	var material = new THREE.MeshBasicMaterial({color:0x00FFFF})
+	var geometry = new THREE.Geometry();
+	for(var i=0; i<this.tris.length; i++){
+		var tri=this.tris[i]
+		tri=this.rotatedTriangle(tri)
+		tri=this.translatedTriangle(tri)
+		geometry.vertices.push(tri.a.THREEVector3())
+		geometry.vertices.push(tri.b.THREEVector3())
+		geometry.vertices.push(tri.c.THREEVector3())
+		var offset=i*3
+		geometry.faces.push(new THREE.Face3(offset,offset+1,offset+2))
+		geometry.faces.push(new THREE.Face3(offset+2,offset+1,offset))
+	}
+	return new THREE.Mesh(geometry, material)
+}
+
 GCollisionMesh.prototype.collide=function(bCollisionMesh){
 	for(var i=0; i<this.lines.length; i++)
 	{
@@ -471,7 +546,12 @@ GCollisionMesh.prototype.collide=function(bCollisionMesh){
 			var tri=bCollisionMesh.tris[j]
 			tri=bCollisionMesh.rotatedTriangle(tri)
 			tri=bCollisionMesh.translatedTriangle(tri)
-			if(tri.crossedByLine(line)){return true;}
+			if(tri.crossedByLine(line))
+			{
+				this.lastCollidedLine=line.clone()
+				this.lastCollidedTriangle=tri.clone()
+				return true;
+			}
 		}
 	}
 	for(var i=0; i<bCollisionMesh.lines.length; i++)
@@ -484,7 +564,12 @@ GCollisionMesh.prototype.collide=function(bCollisionMesh){
 			var tri=this.tris[j]
 			tri=this.rotatedTriangle(tri)
 			tri=this.translatedTriangle(tri)
-			if(tri.crossedByLine(line)){return true;}
+			if(tri.crossedByLine(line))
+			{
+				this.lastCollidedLine=line.clone()
+				this.lastCollidedTriangle=tri.clone()
+				return true;
+			}
 		}
 	}
 	return false;
