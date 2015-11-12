@@ -1,18 +1,24 @@
 //console.log('meep');
 var socket = new WebSocket("ws://localhost:55555");
 
-
 function ping(){
-	if(game != null)
+	//(game.connected != null)
+	ping.pingSentTime=window.performance.now()
+	socket.send('ping')
+}
+
+function pongHandler()
+{
+	if(ping.pingSentTime!=null)
 	{
-		if(game.connected != null)
-		{
-			
-		}
-	
+		time=window.performance.now()-ping.pingSentTime
+		console.log('ping:'+time);
 	}
-
-
+	else
+	{
+		console.log('received a pong but never pinged');
+	}
+	
 }
 
 
@@ -23,22 +29,30 @@ function ping(){
 	}
 	socket.onmessage = function (event) {
 			console.log('message came from server:' + event.data);
-			var message;
-			try {
-				message=JSON.parse(event.data);
-				//console.log(message)
-				if(message.update != null){
-					//console.log('recieved update');
-					update(message.update);
+			var message=event.data;
+			var consumed=false
+			if(message=='pong'){pongHandler(); consumed=true;}
+			if(! consumed && message.slice(0,5)=='JSON:')
+			{
+				try {
+					JSONMessage=message.slice(5)//get everything after 'JSON:'
+					console.log('parsing:'+message)
+					parsedMessage=JSON.parse(JSONMessage);
+					//console.log(message)
+					if(parsedMessage.update != null){
+						//console.log('recieved update');
+						update(parsedMessage.update);
+					}
+					if(parsedMessage.actions != null){
+						//console.log('action happening!?');
+						do_actions(parsedMessage.actions);
+					}
 				}
-				if(message.actions != null){
-					//console.log('action happening!?');
-					do_actions(message.actions);
+				catch(error){
+					if (error instanceof SyntaxError)console.log(error);
 				}
 			}
-			catch(error){
-				if (error instanceof SyntaxError)console.log(error);
-			}
+			
 
 	}
 		//socket.onerror=function (event)  {}// not used because event contains no information
@@ -92,14 +106,32 @@ function ping(){
 	//passing arguments seems like a problem
 	//	//turns out not a problem, javascript functions are variadic
 	//  // fexpr.length returns the 'correct' number of arguments
-	//  // fexpr.apply(this, [args_array]/null) calls function with an array as arguments
+	//  // fexpr.apply(what_this_should_mean, [args_array]/null) calls function with an array as arguments
+	actions=function(){}
+	actions.applyServerSetSyncID=function(serverSetSyncID, clientSetSyncID)
+	{
+		game.syncedUp[clientSetSyncID].serverSetSyncID=serverSetSyncID
+		console.log("action applyServerSetSyncID serverSeSyncID:"+serverSetSyncID +"applied to client Unit with clientSetSyncID:" + clientSetSyncID)
+	}
+	actions.spawnUnit=function(descriptionObject)
+	{
+		
+	}
+	actions.updateUnit=function(descriptionObject)
+	{
+		
+	} 
 	
-	function do_actions(action_obj_from_server){
-		//console.log('action happening part 2!?...')
-		for(property in action_obj_from_server){
-				//console.log('action args:'+ JSON.stringify(action_obj_from_server[property]))
-				actionArgs=action_obj_from_server[property];
-				actionFunction=actions[property];
+	function do_actions(actions_obj_from_server){
+		console.log('action happening?...')
+		for(actionName in actions_obj_from_server){
+				// actionName is an action (function name) which is also key to corresponding args
+				// i.e. {"printToConsole":["I am an arg which should get passed to the printToConsole function"]}
+				actionArgs=actions_obj_from_server[actionName];
+				console.log('action:'+actionName)
+				console.log('args:'+actions_obj_from_server[actionName])
+				actionFunction=actions[actionName];
+				
 				actionFunction.apply(window, actionArgs);
 		}
 
@@ -107,8 +139,4 @@ function ping(){
 	
 
 })();
-
-
-//console.log('moop');
-
 

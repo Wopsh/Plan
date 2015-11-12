@@ -1,8 +1,63 @@
 /* collison library
-TODO: platforming collisions (collision w sloped plane allows upward movement) (collide y only?)
+TODO: slope collision resolution
+		change movement to be parallel with slope/shorter! prefer slope climb to truncation
+				parallel creates gap chose intercept aproximation?
+		
 TODO: box collisions (includes rotation)
 TODO: bounds collisions
 TODO: movement truncation
+
+
+
+add extendy move function to collision mesh
+e.g. extend(v) where v is gvector(4,0,0)
+extendedlines=[]
+extendedtris=[]
+for every line l 
+	make new line(l.a.sum(v),l.b.sum(v)) l2
+	//make two triangles
+	t2a=new triangle(l.a,l2.a,l2.b)
+	t2b=new triangle(l.b,l2.a,l2.b)
+	
+	extendedlines.push(l2)
+	extendedlines.push(line(l.a,l2.a))
+	extendedlines.push(line(l.b,l2.b))
+	extendedtris.push(t2a)
+	extendedtris.push(t2b)
+for every tri t
+	extendedtris.push(new tri(t.a.sum(v),t.b.sum(v),t.c.sum(v)))
+the effect is to create a 3d trail along vector v to show movement is possible/impossible along
+that vector. this prevents large movements from clipping through things
+
+
+function extendedCollision(other,v){
+var extendedLines=[]
+var extendedTris=[]
+for(var i=0; i<this.lines.length; i++)
+	{
+		var line=this.lines[i]
+		line=this.rotatedLine(line)
+		line=this.translatedLine(line)
+		line2=new GLine(line.a.sum(v),line.b.sum(v)) // line translated by movement vector
+		triA=new GTriangle(line.a,line2.a,line2.b)
+		triB=new GTriangle(line.b,line2.a,line2.b)
+		extendedLines.push(line2)
+		extendedLines.push(line(line.a,line2.a))
+		extendedLines.push(line(line.b,line2.b))
+		extendedTris.push(triA)
+		extendedTris.push(triB)
+	}
+for(var i=0; i<this.tris.length; i++)
+	{
+		var tri=this.tris[i]
+		tri=this.rotatedTriangle(tri)
+		tri=this.translatedTriangle(tri)
+		extendedTris.push(tri.translation(v))
+		}
+}
+
+
+
 */
 
 /*
@@ -20,6 +75,12 @@ function GVector(x,y,z)//constructor
 
 GVector.prototype.constructionString=function(){
 	return 'new GVector('+this.x+', '+this.y+', '+this.z+')';
+}
+
+GVector.prototype.set=function(x,y,z){
+	this.x=x;
+	this.y=y;
+	this.z=z;
 }
 
 GVector.prototype.intrinsicRotateXYZ=function(xRotation,yRotation,zRotation){
@@ -223,15 +284,12 @@ GPlane.prototype.crossedByLine = function(line)
 
 }
 
-
 GPlane.prototype.isLineParallel = function(line)
 {
 	var aDist=this.signedDistanceToPoint(line.a)
 	var bDist=this.signedDistanceToPoint(line.b)
 	return aDist==0 && bDist==0;
-
 }
-
 
 GPlane.prototype.crossingPointOfLine = function(line)
 {
@@ -272,6 +330,11 @@ function GTriangle(pointA, pointB, pointC)
 	this.a=pointA.clone()
 	this.b=pointB.clone()
 	this.c=pointC.clone()
+}
+
+GTriangle.prototype.translation=function(v)
+{
+	return new GTriangle(this.a.sum(v),this.b.sum(v),this.c.sum(v))
 }
 
 GTriangle.prototype.constructionString = function(){
@@ -324,11 +387,16 @@ GTriangle.prototype.edgePlanes = function(){
 	var ab = (new GTriangle(this.a, this.b, this.a.sum(normal))).plane()
 	var bc = (new GTriangle(this.b, this.c, this.b.sum(normal))).plane()
 	var ca = (new GTriangle(this.c, this.a, this.c.sum(normal))).plane()
-	if(ab.isPointExterior(centroid)){console.log("warning: ab edgeplane normal was inverted"); ab=ab.scalarProduct(-1)}
-	if(bc.isPointExterior(centroid)){console.log("warning: bc edgeplane  normal was inverted"); bc=bc.scalarProduct(-1)}
-	if(ca.isPointExterior(centroid)){console.log("warning: ca edgeplane normal was inverted"); ca=ca.scalarProduct(-1)}
+	/*
+	there used to be a warning if the normal faced towards the centroid
+	if(ab.isPointExterior(centroid)){console.log("warning: ab edgeplane normal was inverted"); ab.normal=ab.normal.scalarProduct(-1)}
+	if(bc.isPointExterior(centroid)){console.log("warning: bc edgeplane  normal was inverted"); bc.normal=bc.normal.scalarProduct(-1)}
+	if(ca.isPointExterior(centroid)){console.log("warning: ca edgeplane normal was inverted"); ca.normal=ca.normal.scalarProduct(-1)}
+	*/
+	if(ab.isPointExterior(centroid)){ab.normal=ab.normal.scalarProduct(-1)}
+	if(bc.isPointExterior(centroid)){bc.normal=bc.normal.scalarProduct(-1)}
+	if(ca.isPointExterior(centroid)){ca.normal=ca.normal.scalarProduct(-1)}
 	return [ab,bc,ca];
-
 }
 
 GTriangle.prototype.crossedByLine = function(line){
@@ -416,6 +484,53 @@ var GDemo =
 	line:new GLine(new GVector(0,0,0),new GVector(0,-1,0))
 };
 
+function GBoundingBox(arg){
+	this.pos=new GVector(0,0,0)
+	if(arg.vertices!=null)
+	{
+	this.maxX=vertices[0].x;
+		this.maxY=vertices[0].y;
+		this.maxZ=vertices[0].z;
+		this.minX=vertices[0].x;
+		this.minY=vertices[0].y;
+		this.minZ=vertices[0].z;
+		for(var i=0; i<vertices.length; i++)
+		{
+			if (vertices[i].x>this.maxX){
+				this.maxX=vertices[i].x
+			}
+			if(vertices[i].y>this.maxY){
+				this.maxY=vertices[i].y
+			}
+			if(vertices[i].z>this.maxZ){
+				this.maxZ=vertices[i].z
+			}
+			if(vertices[i].x<this.minX){
+				this.minX=vertices[i].x
+			}
+			if(vertices[i].y<this.minY){
+				this.minY=vertices[i].y
+			}
+			if(vertices[i].z<this.minZ){
+				this.minZ=vertices[i].z
+			}
+		}
+	}
+
+}
+
+GBoundingBox.prototype.collideBoundingBox = function(boundingBoxB)
+{
+	if(boundingBoxB.maxX<this.maxZ && boundingBoxB.maxX>this.minX) return true;
+	if(boundingBoxB.maxY<this.maxY && boundingBoxB.maxY>this.minY) return true;
+	if(boundingBoxB.maxX<this.maxZ && boundingBoxB.maxZ>this.minZ) return true;
+	
+	if(boundingBoxB.minX<this.maxZ && boundingBoxB.minX>this.minX) return true;
+	if(boundingBoxB.minY<this.maxY && boundingBoxB.minY>this.minY) return true;
+	if(boundingBoxB.minX<this.maxZ && boundingBoxB.minZ>this.minZ) return true;
+	return false;
+}
+
 function GCollisionMesh(arg){
 	var THREEJSGeometry;
 	if(arg instanceof THREE.Geometry)
@@ -431,6 +546,49 @@ function GCollisionMesh(arg){
 	
 	var faces=THREEJSGeometry.faces
 	var vertices=THREEJSGeometry.vertices
+	/* new work  ******************************************************************* */
+	/*
+		use GPlane.crossingPointOfLine with vertical line from deltaYPointATopointB at X and Y of pointb?
+		 >>> this is and should be a boxy and inaccurate fast, simple collision.
+	*/
+	// work moved to bounding box class add bounding box to collision mesh?
+	// add bounding sphere?
+	
+	/*
+		movement/collision resolution search
+		step size is movement length
+		on failure halve step size and move back by step
+		on success move forward then halve step size
+		function partialmovesolution(){
+		var move = args.movevector
+		var steplen=0.25
+		var searchpos=0.5;
+		var lastgood=0;
+		var loops=0
+		var maxloops=10
+		while (loops<maxloops)
+		{
+			cmesh1.position=Gvector.sum(GVector.scalarProduct(move,ssearchlen))
+			if(cmesh1.collisiondetect()==true)
+			{
+				searchpos-=steplen
+			}
+			else
+			{
+				searchpos+=steplen
+				lastgood=searchpos;
+			}
+			steplen*=0.5
+			loops++;
+		}
+		return safe move of GVector.scalarProduct(move,lastgood) 
+		}
+		
+	*/
+	
+	
+	
+	/* new work  ******************************************************************* */
 	this.lines=[]
 	for(var i=0; i<faces.length; i++){
 		var THREEA = vertices[faces[i].a]
@@ -454,6 +612,13 @@ function GCollisionMesh(arg){
 		var b=new GVector(THREEB.x, THREEB.y, THREEB.z)
 		var c=new GVector(THREEC.x, THREEC.y, THREEC.z)
 		this.tris.push(new GTriangle(a,b,c));
+	}
+	this.boundingSphereRadius=0
+	for(var i=0; i<this.lines.length; i++){
+		var aDist=this.lines[i].a.length();
+		var bDist=this.lines[i].b.length();
+		if(aDist>this.boundingSphereRadius)this.boundingSphereRadius=aDist;
+		if(bDist>this.boundingSphereRadius)this.boundingSphereRadius=bDist;
 	}
 	this.lastCollidedTriangle=null;
 	this.lastCollidedLine=null;
@@ -517,7 +682,15 @@ GCollisionMesh.prototype.THREETriangles = function(){
 	return new THREE.Mesh(geometry, material)
 }
 
-GCollisionMesh.prototype.collide=function(bCollisionMesh){
+
+GCollisionMesh.prototype.collides=function(bCollisionMesh){
+	//newer
+	var aPos=new GVector(this.position.x, this.position.y, this.position.z)
+	var bPos=new GVector(bCollisionMesh.position.x, bCollisionMesh.position.y, bCollisionMesh.position.z)
+	var aBDist = aPos.difference(bPos).length()
+	if(aBDist> (this.boundingSphereRadius+bCollisionMesh.boundingSphereRadius) ){return false;}// bounding spheres to far for possible collision
+	
+	//end newer
 	for(var i=0; i<this.lines.length; i++)
 	{
 		var line=this.lines[i]
@@ -546,6 +719,72 @@ GCollisionMesh.prototype.collide=function(bCollisionMesh){
 			var tri=this.tris[j]
 			tri=this.rotatedTriangle(tri)
 			tri=this.translatedTriangle(tri)
+			if(tri.crossedByLine(line))
+			{
+				this.lastCollidedLine=line.clone()
+				this.lastCollidedTriangle=tri.clone()
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+GCollisionMesh.prototype.extendedCollision=function(other,v){
+	
+	var aPos=new GVector(this.position.x, this.position.y, this.position.z)
+	var bPos=new GVector(other.position.x, other.position.y, other.position.z)
+	var aBDist = aPos.difference(bPos).length()
+	if(aBDist > (this.boundingSphereRadius + other.boundingSphereRadius + v.length()) ){return false;}// bounding spheres to far for possible collision
+	
+	var extendedLines=[]
+	var extendedTris=[]
+	for(var i=0; i<this.lines.length; i++)
+	{
+		var line=this.lines[i]
+		line=this.rotatedLine(line)
+		line=this.translatedLine(line)
+		var line2=new GLine(line.a.sum(v),line.b.sum(v)) // line translated by movement vector
+		var triA=new GTriangle(line.a,line2.a,line2.b)
+		var triB=new GTriangle(line.b,line2.a,line2.b)
+		extendedLines.push(line2)
+		extendedLines.push(new GLine(line.a,line2.a))
+		extendedLines.push(new GLine(line.b,line2.b))
+		extendedTris.push(triA)
+		extendedTris.push(triB)
+	}
+	for(var i=0; i<this.tris.length; i++)
+	{
+		var tri=this.tris[i]
+		tri=this.rotatedTriangle(tri)
+		tri=this.translatedTriangle(tri)
+		extendedTris.push(tri.translation(v))
+	}
+	
+	for(var i=0; i<extendedLines.length; i++)
+	{
+		var line=extendedLines[i]
+		for(var j=0; j<other.tris.length; j++)
+		{
+			var tri=other.tris[j]
+			tri=other.rotatedTriangle(tri)
+			tri=other.translatedTriangle(tri)
+			if(tri.crossedByLine(line))
+			{
+				this.lastCollidedLine=line.clone()
+				this.lastCollidedTriangle=tri.clone()
+				return true;
+			}
+		}
+	}
+	for(var i=0; i<other.lines.length; i++)
+	{
+		var line=other.lines[i]
+		line=other.rotatedLine(line)
+		line=other.translatedLine(line)
+		for(var j=0; j<extendedTris.length; j++)
+		{
+			var tri=extendedTris[j]
 			if(tri.crossedByLine(line))
 			{
 				this.lastCollidedLine=line.clone()

@@ -10,55 +10,48 @@
 //blur
 //select
 //load
-
-var canvas;
-var input_callbacks ={
-	mousemove:function mouseMoveCallback(event){},//event.movementY, event.clientY, event.screenY
-	keypress:function keyPress(event){},//console.log({key_code:event.keyCode, key_char:event.charCode})},
-	keyup:function keyUp(event){console.log({key_up_code:event.keyCode})},
-	keydown:function keyDown(event){},//console.log({key_code:event.keyCode})}
-	click:function keyDown(event){console.log(event);}//console.log({key_code:event.keyCode})}
-};
-
-
-function input_setup(setup_object){
-	if(setup_object.canvas!=null){
-		canvas=setup_object.canvas;
-	}
-	else{
-		canvas=document.getElementById(setup_object.canvas_id);
-	}
-	prepare_multibrowser();
-	if (setup_object.get_pointer_lock==true)
+function CanvasInputHandler(canvas)
+{
+	this.SPACE=32;
+	this.LEFT=37;
+	this.UP=38;
+	this.DOWN=40;
+	this.RIGHT=39;
+	
+	this.callbacks=
 	{
-		canvas.onclick=function (){
-			canvas.requestPointerLock();
+		mousemove:function mouseMoveCallback(event){},//event.movementY, event.clientY, event.screenY
+		keypress:function keyPress(event){},//console.log({key_code:event.keyCode, key_char:event.charCode}),
+		keyup:function keyUp(event){},//console.log({key_up_code:event.keyCode})
+		keydown:function keyDown(event){},//console.log({key_code:event.keyCode})
+		click:function keyDown(event){}//console.log({key_code:event.keyCode})
+	};
+	this.keyStates=[];
+	var callbacks=this.callbacks
+	var keyStates=this.keyStates
+	keyUpStaeHandler=function(event)
+	{
+		keyStates[event.keyCode]='UP';
+		if((event.keyCode>=65 && event.keyCode<=90) || (event.keyCode>=97 && event.keyCode<=122))
+		{
+			keyStates[String.fromCharCode(event.keyCode).toUpperCase()]='UP'
+			keyStates[String.fromCharCode(event.keyCode).toLowerCase()]='UP'
 		}
 	}
-	canvas.addEventListener('mousemove', function(event){input_callbacks.mousemove(event);}, false);
-	canvas.addEventListener('keyup', function(event){input_callbacks.keyup(event);}, false);
-	canvas.addEventListener('keydown', function(event){input_callbacks.keydown(event);}, false);
-	canvas.addEventListener('keypress', function(event){input_callbacks.keypress(event);}, false);
-	canvas.addEventListener('click', function(event){input_callbacks.click(event);}, false);
-	
-}
-
-function prepare_multibrowser(){
-	//Why, browser vendors, would you do this to me?
-	console.log('preparing multibrowser compatibility objects');
-	canvas.requestPointerLock=	canvas.requestPointerLock||
-								canvas.webkitRequestPointerLock||
-								canvas.mozRequestPointerLock||
-								canvas.oRequestPointerLock||
-								canvas.msRequestPointerLock||
-								function (){
-									alert('Pointer Lock unsupported on this browser. Try using another one');};
+	keyDownStateHandler=function (event)
+	{
+		keyStates[event.keyCode]='DOWN';
+		if((event.keyCode>=65 && event.keyCode<=90) || (event.keyCode>=97 && event.keyCode<=122))
+		{
+			keyStates[String.fromCharCode(event.keyCode).toUpperCase()]='DOWN'
+			keyStates[String.fromCharCode(event.keyCode).toLowerCase()]='DOWN'
+		}
+	};
+	canvas.addEventListener('mousemove', function(event){callbacks.mousemove(event);}, false);
+	canvas.addEventListener('keyup', function(event){callbacks.keyup(event); keyUpStaeHandler(event);}, false);
+	canvas.addEventListener('keydown', function(event){callbacks.keydown(event); keyDownStateHandler(event);}, false);
+	canvas.addEventListener('keypress', function(event){callbacks.keypress(event);}, false);
+	canvas.addEventListener('click', function(event){callbacks.click(event);}, false);
 }
 
 
-
-
-function canvasOnClick(canvas){
-		console.log('canvas clicked');
-		canvas.requestPointerLock();
-}

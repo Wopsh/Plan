@@ -7,12 +7,14 @@
 <script src="geometry.js"></script>
 <script src="canvas_input.js"></script>
 <script src="websocket.js"></script>
-<script src="collision.js"></script>
-<script src="3d.js"></script>
+<script src="collision3.js"></script>
+<script src="unit.js"></script>
+<script src="basic.js"></script>
+<script src="hardsetup.js"></script>
 </head>
 <body onLoad="setup()">
 <canvas style="border:blue solid 2px;" id="canvas" tabindex="0" width="720" height="480"></canvas>
-<div style="align:left; background-color:#444; visibility:hidden;">
+<div style="background-color:#444; visibility:hidden;">
 Game Server IP Address: <input type="text" id="custom_ip" value="127.0.0.1"><br>
 	 Port: <input type="text" id="custom_port" value="55555"><br>
 	<button onclick="connectPress()">Connect</button>
